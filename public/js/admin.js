@@ -925,6 +925,10 @@ function renderKanban() {
       });
 
       people.forEach(person => {
+        const tasks = byPerson[person.id] || [];
+        // Пустые группы полностью скрыты — не создаём DOM-узел.
+        if (!tasks.length) return;
+
         const group = document.createElement('div');
         group.className = 'person-group';
         group.dataset.personId = person.id;
@@ -943,12 +947,7 @@ function renderKanban() {
         tasksWrap.dataset.personId = person.id;
         tasksWrap.dataset.horizon = h.key;
 
-        const tasks = byPerson[person.id] || [];
-        if (!tasks.length) {
-          group.classList.add('empty-group', 'group-collapsed');
-        } else {
-          tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
-        }
+        tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
 
         group.appendChild(tasksWrap);
         col.appendChild(group);
@@ -984,12 +983,8 @@ function renderKanban() {
       bubbleScroll: true,
       fallbackOnBody: true,
       swapThreshold: 0.65,
-      onStart: () => {
-        document.querySelectorAll('.card').forEach(c => c.dataset.moved = '');
-        document.body.classList.add('dragging-active');
-      },
+      onStart: () => { document.querySelectorAll('.card').forEach(c => c.dataset.moved = ''); },
       onEnd: async evt => {
-        document.body.classList.remove('dragging-active');
         evt.item.dataset.moved = '1';
         const planId = parseInt(evt.item.dataset.planId);
         const newHorizon = evt.to.dataset.horizon;
