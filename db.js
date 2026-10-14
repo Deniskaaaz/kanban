@@ -76,8 +76,10 @@ if (!kulebinCols.includes('values_json')) {
   console.log('migration: added kulebin.values_json');
 }
 
-const hasOldKulebin = kulebinCols.includes('plan_paid');
-if (hasOldKulebin) {
+// Одноразовая миграция старых данных из plan_paid/plan_skud/... в values_json.
+// Защита от повторного запуска — флаг в settings.
+const migrationDone = db.prepare("SELECT value FROM settings WHERE key = 'kulebin_migrated'").get();
+if (!migrationDone && kulebinCols.includes('plan_paid')) {
   const need = db.prepare(
     "SELECT COUNT(*) AS c FROM kulebin WHERE values_json IS NULL OR values_json = '' OR values_json = '{}'"
   ).get().c;
@@ -97,6 +99,7 @@ if (hasOldKulebin) {
     });
     console.log('migration: kulebin old data → values_json');
   }
+  db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES ('kulebin_migrated', '1')").run();
 }
 
 // дефолтные столбцы
@@ -138,7 +141,7 @@ if (userCount === 0) {
   console.log('Создан первый администратор:');
   console.log('  Имя:     Администратор');
   console.log('  Токен:   ' + token);
-  console.log('  Войти:   https://31.130.128.105.nip.io/login?token=' + token);
+  console.log('  Войти:   /login?token=' + token);
   console.log('========================================================');
 }
 
@@ -151,5 +154,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_board_access_user  ON board_access(user_id);
   CREATE INDEX IF NOT EXISTS idx_board_access_board ON board_access(board_id);
 `);
+
+// ---- Периодический checkpoint WAL ----
+// PM2 держит соединение вечно, поэтому SQLite не делает финальный checkpoint
+// при закрытии. Раз в 5 минут принудительно сбрасываем WAL в основной файл.
+const CHECKPOINT_INTERVAL_MS = 5 * 60 * 1000;
+setInterval(() => {
+  try {
+    db.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (e) {
+    console.error('wal_checkpoint failed:', e.message);
+  }
+}, CHECKPOINT_INTERVAL_MS).unref();
 
 module.exports = db;
