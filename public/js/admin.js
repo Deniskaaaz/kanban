@@ -924,6 +924,10 @@ function renderKanban() {
         byPerson[p.person_id].push(p);
       });
 
+      const bodyWrapper = document.createElement('div');
+      bodyWrapper.className = 'col-body-wrapper';
+      bodyWrapper.dataset.horizon = h.key;
+
       people.forEach(person => {
         const tasks = byPerson[person.id] || [];
         // Пустые группы полностью скрыты — не создаём DOM-узел.
@@ -950,15 +954,17 @@ function renderKanban() {
         tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
 
         group.appendChild(tasksWrap);
-        col.appendChild(group);
+        bodyWrapper.appendChild(group);
       });
 
       if (hiddenCount && !showArchive) {
         const note = document.createElement('div');
         note.className = 'archived-notice';
         note.textContent = '+ ' + hiddenCount + ' в архиве';
-        col.appendChild(note);
+        bodyWrapper.appendChild(note);
       }
+
+      col.appendChild(bodyWrapper);
 
       const addBtn = document.createElement('button');
       addBtn.className = 'add-task-btn';
@@ -969,9 +975,7 @@ function renderKanban() {
     boardDiv.appendChild(col);
   });
 
-  // Sortable на каждой группе задач — задачи летают между группами и колонками.
-  // scroll: true + bubbleScroll — при перетаскивании вверх/вниз автоматически
-  // прокручивается и группа, и колонка (если внутри группы не хватает места).
+  // ---- Sortable на каждой группе задач: перетаскивание между людьми и колонками ----
   document.querySelectorAll('.person-tasks').forEach(tw => {
     const s = Sortable.create(tw, {
       group: 'plans',
@@ -987,14 +991,60 @@ function renderKanban() {
       onEnd: async evt => {
         evt.item.dataset.moved = '1';
         const planId = parseInt(evt.item.dataset.planId);
-        const newHorizon = evt.to.dataset.horizon;
-        const newPersonId = parseInt(evt.to.dataset.personId);
-        const newIndex = evt.newIndex;
+        if (!planId) return;
+        const plan = state.plans.find(p => p.id === planId);
+        if (!plan) return;
+
+        const toIsTasks = evt.to.classList.contains('person-tasks');
+        const columnEl = evt.to.closest('.column');
+        const newHorizon = columnEl ? columnEl.dataset.horizon : plan.horizon;
+        const newPersonId = toIsTasks ? parseInt(evt.to.dataset.personId) : plan.person_id;
+        const newIndex = toIsTasks ? evt.newIndex : null;
+
+        // Если задача упала вне группы (в пустое место колонки) — SortableJS
+        // вставил её как временный DOM-узел. Убираем, ждём перерисовки от сокета.
+        if (!toIsTasks) {
+          evt.item.remove();
+        }
+
+        const body = { horizon: newHorizon, person_id: newPersonId };
+        if (newIndex !== null) body.position = newIndex * 100;
+
         try {
           await fetch(`/api/plans/${planId}/move`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ horizon: newHorizon, person_id: newPersonId, position: newIndex * 100 })
+            body: JSON.stringify(body)
+          });
+        } catch (err) { console.error('move failed', err); }
+      }
+    });
+    sortables.push(s);
+  });
+
+  // ---- Sortable на колонке целиком: ловит drop в пустое место (не на группу) ----
+  // put: true — принимает; pull: false — сам ничего не отдаёт (отдают только .person-tasks).
+  document.querySelectorAll('.col-body-wrapper').forEach(wrapper => {
+    const s = Sortable.create(wrapper, {
+      group: { name: 'plans', put: true, pull: false },
+      animation: 150,
+      ghostClass: 'dragging',
+      draggable: '.card',
+      onAdd: async evt => {
+        const planId = parseInt(evt.item.dataset.planId);
+        evt.item.remove();   // убираем временный DOM-узел
+        if (!planId) return;
+        const plan = state.plans.find(p => p.id === planId);
+        if (!plan) return;
+
+        const horizon = wrapper.dataset.horizon;
+        if (!horizon) return;
+
+        try {
+          await fetch(`/api/plans/${planId}/move`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ horizon, person_id: plan.person_id })
           });
         } catch (err) { console.error('move failed', err); }
       }
