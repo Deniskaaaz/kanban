@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#7c3aed">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>План работ</title>
+<link rel="stylesheet" href="/css/tv.css">
+</head>
+<body>
+
+<header>
+  <h1>
+    <img id="tv-logo" src="" alt="" style="display:none;max-height:52px;max-width:220px;object-fit:contain;vertical-align:middle;">
+    <span id="tv-title">План работ</span>
+    <span class="board-name" id="board-name">—</span>
+  </h1>
+  <div class="header-right">
+    <div class="alerts" id="alerts">
+      <span class="alert-pill high"  id="alert-high">🔴 важных: 0</span>
+      <span class="alert-pill late"  id="alert-late">🔥 просрочено: 0</span>
+      <span class="alert-pill today" id="alert-today">⏰ сегодня: 0</span>
+    </div>
+    <div class="header-clock">
+      <div class="clock" id="clock">--:--</div>
+      <div class="date" id="date">—</div>
+    </div>
+    <div class="status" id="status">connect</div>
+  </div>
+</header>
+
+<div id="main-area"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/tv.js"></script>
+
+<script>
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+</script>
+
+</body>
+</html>

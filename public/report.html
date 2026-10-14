@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>Отчёт за неделю — План работ</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, 'Segoe UI', Roboto, sans-serif;
+    background: #f1f5f9;
+    color: #1e293b;
+    padding: 24px 32px;
+    line-height: 1.5;
+  }
+  .toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .toolbar button {
+    font: inherit; cursor: pointer;
+    padding: 10px 18px; font-size: 14px; font-weight: 600;
+    border: none; border-radius: 8px;
+    background: #2563eb; color: #fff;
+    transition: background .15s;
+  }
+  .toolbar button.secondary { background: #e2e8f0; color: #334155; }
+  .toolbar button:hover { background: #1d4ed8; }
+  .toolbar button.secondary:hover { background: #cbd5e1; }
+
+  header.report-header {
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid #7c3aed;
+  }
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .period {
+    font-size: 15px;
+    color: #64748b;
+    font-weight: 500;
+  }
+  .generated {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .board-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(15,23,42,.06);
+  }
+  .board-section h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #7c3aed;
+    margin-bottom: 4px;
+  }
+  .board-type {
+    font-size: 11px;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 18px;
+    font-weight: 600;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 14px 16px;
+    border: 1px solid #e2e8f0;
+  }
+  .stat-box .label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+  .stat-box .value {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .stat-box.danger { background: #fef2f2; border-color: #fecaca; }
+  .stat-box.danger .value { color: #dc2626; }
+  .stat-box.good { background: #f0fdf4; border-color: #bbf7d0; }
+  .stat-box.good .value { color: #16a34a; }
+
+  .people-list { margin-top: 16px; }
+  .people-list h3 {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .person-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+  }
+  .person-row:last-child { border-bottom: none; }
+  .person-name { font-weight: 500; color: #1e293b; }
+  .person-stats { color: #64748b; font-size: 13px; }
+  .person-stats .big {
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 15px;
+  }
+
+  .plan-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+  }
+  .plan-row:last-child { border-bottom: none; }
+  .plan-name { font-weight: 500; color: #475569; }
+  .plan-values { display: flex; gap: 16px; align-items: baseline; }
+  .plan-value { font-weight: 700; color: #1e293b; font-size: 17px; }
+  .plan-pct { font-size: 14px; font-weight: 700; padding: 3px 10px; border-radius: 10px; }
+  .plan-pct.low  { background: #fee2e2; color: #b91c1c; }
+  .plan-pct.mid  { background: #fef3c7; color: #92400e; }
+  .plan-pct.high { background: #dcfce7; color: #166534; }
+
+  .total-section {
+    background: linear-gradient(135deg, #ede9fe 0%, #f5f3ff 100%);
+    border: 2px solid #7c3aed;
+    border-radius: 12px;
+    padding: 28px;
+    margin-top: 24px;
+  }
+  .total-section h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #6d28d9;
+    margin-bottom: 20px;
+    letter-spacing: 2px;
+  }
+  .total-section h2::before {
+    content: 'Σ  ';
+    font-size: 26px;
+  }
+  .total-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  .total-cell { text-align: center; }
+  .total-cell .label {
+    font-size: 12px;
+    color: #6d28d9;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .total-cell .value {
+    font-size: 28px;
+    font-weight: 800;
+    color: #5b21b6;
+  }
+
+  .empty {
+    padding: 40px;
+    text-align: center;
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 16px;
+  }
+
+  @media print {
+    body {
+      background: #fff;
+      padding: 0;
+      font-size: 12px;
+    }
+    .no-print { display: none !important; }
+    header.report-header {
+      border-bottom-color: #7c3aed;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .board-section {
+      box-shadow: none;
+      border: 1px solid #e2e8f0;
+      page-break-inside: avoid;
+      margin-bottom: 14px;
+      padding: 16px;
+    }
+    .board-section h2 { font-size: 16px; }
+    .stat-box .value { font-size: 18px; }
+    .total-cell .value { font-size: 22px; }
+    .stat-box.danger,
+    .stat-box.good,
+    .plan-pct,
+    .total-section {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    @page { margin: 1cm; }
+  }
+</style>
+</head>
+<body>
+
+<div class="toolbar no-print">
+  <button onclick="window.print()">🖨 Печать / Сохранить PDF</button>
+  <button class="secondary" onclick="location.href='/admin'">← Вернуться в админку</button>
+</div>
+
+<header class="report-header">
+  <h1 id="title">ОТЧЁТ ЗА НЕДЕЛЮ</h1>
+  <div class="period" id="period">—</div>
+  <div class="generated" id="generated">—</div>
+</header>
+
+<div id="content"><div class="empty">Загрузка…</div></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/report.js"></script>
+
+</body>
+</html>

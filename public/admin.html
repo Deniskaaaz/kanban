@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>План работ — админка</title>
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+
+<header>
+  <h1 style="display:flex;align-items:center;gap:12px;">
+    <span id="header-logo-slot" style="display:none;"></span>
+    <span id="header-title">ПЛАН РАБОТ — АДМИНКА</span>
+  </h1>
+  <div class="actions">
+    <select id="board-select" class="board-select"></select>
+    <button class="secondary" id="btn-manage-boards" data-admin-only title="Управление досками">⚙</button>
+    <button class="secondary" id="btn-columns" data-kulebin-only title="Настроить столбцы">📊 Столбцы</button>
+    <button class="secondary" id="btn-users" data-admin-only title="Пользователи">👥</button>
+    <span class="status" id="status">connecting…</span>
+    <span id="user-name" style="font-size:13px;color:#475569;padding:4px 10px;background:#e2e8f0;border-radius:12px;"></span>
+    <a href="/report" target="_blank" class="secondary" style="text-decoration:none;padding:8px 14px;font-size:14px;border-radius:8px;background:#e2e8f0;color:#334155;">📄 Отчёт</a>
+    <button class="theme-toggle" id="btn-theme" title="Переключить тему">🌙</button>
+    <button class="theme-toggle" id="btn-notif" title="Уведомления выключены">🔕</button>
+    <a href="/logout" class="secondary" style="text-decoration:none;padding:8px 14px;font-size:14px;border-radius:8px;background:#e2e8f0;color:#334155;">Выйти</a>
+    <button class="secondary" id="btn-archive" data-kanban-only>📦 Архив</button>
+    <button class="secondary" id="btn-add-person">+ Человек</button>
+    <button id="btn-add-plan" data-kanban-only>+ План</button>
+  </div>
+</header>
+
+<div id="main-area"></div>
+
+<div class="modal" id="person-modal">
+  <div class="modal-box">
+    <h2 id="person-modal-title">Новый ответственный</h2>
+
+    <div class="field">
+      <label>Фото</label>
+      <div style="display:flex;gap:14px;align-items:center;">
+        <div id="person-avatar-preview"></div>
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          <input type="file" id="person-avatar-file" accept="image/png,image/jpeg,image/webp" style="font-size:12px;">
+          <button type="button" class="secondary" id="person-avatar-remove" style="padding:6px 10px;font-size:12px;align-self:flex-start;">Удалить фото</button>
+          <span style="font-size:11px;color:#94a3b8;">JPG / PNG / WebP. Обрежется до квадрата и уменьшится до 200×200.</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="field"><label>ФИО</label><input type="text" id="person-name" placeholder="Иванов Иван Иванович"></div>
+
+    <div class="field">
+      <label>Заметка (необязательно)</label>
+      <input type="text" id="person-note" placeholder="в отпуске / стажёр / на больничном…" maxlength="120">
+      <p style="font-size:11px;color:#94a3b8;margin-top:4px;">Показывается под именем в таблице и на ТВ.</p>
+    </div>
+
+    <div class="modal-actions">
+      <div class="left"><button class="danger" id="btn-delete-person" style="display:none;">Удалить</button></div>
+      <div class="right">
+        <button class="secondary" id="btn-cancel-person">Отмена</button>
+        <button id="btn-save-person">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="plan-modal">
+  <div class="modal-box">
+    <h2 id="plan-modal-title">Новый план</h2>
+    <div class="field"><label>Ответственный</label><select id="plan-person"></select></div>
+    <div class="field">
+      <label>Горизонт</label>
+      <select id="plan-horizon">
+        <option value="longterm">Долгосрок</option>
+        <option value="month">Месяц</option>
+        <option value="week">Неделя</option>
+        <option value="day">День</option>
+        <option value="done">Готово</option>
+      </select>
+    </div>
+    <div class="field"><label>Текст плана</label><textarea id="plan-title"></textarea></div>
+    <div class="field">
+      <label>Приоритет</label>
+      <select id="plan-priority">
+        <option value="2">🔴 Высокий</option>
+        <option value="1" selected>🟡 Обычный</option>
+        <option value="0">🟢 Низкий</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Дедлайн</label>
+      <div class="due-row">
+        <input type="date" id="plan-due">
+        <button class="secondary" id="btn-clear-due">Сбросить</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <div class="left"><button class="danger" id="btn-delete-plan" style="display:none;">Удалить</button></div>
+      <div class="right">
+        <button class="secondary" id="btn-cancel-plan">Отмена</button>
+        <button id="btn-save-plan">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="board-modal">
+  <div class="modal-box">
+    <h2>Управление досками</h2>
+    <div id="board-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;"></div>
+    <div class="field"><label>Название новой доски</label><input type="text" id="board-new-name" placeholder="Например, гр.Кулибин 2"></div>
+    <div class="field">
+      <label>Тип доски</label>
+      <select id="board-new-type">
+        <option value="kanban">Канбан (горизонты)</option>
+        <option value="kulebin">Таблица (настраиваемые столбцы)</option>
+      </select>
+    </div>
+
+    <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+    <div class="field">
+      <label>Интервал переключения досок на ТВ (секунд)</label>
+      <div style="display:flex;gap:8px;align-items:center;max-width:280px;">
+        <input type="number" id="rotate-interval" min="5" max="3600" step="5" value="30" style="flex:1;">
+        <button id="btn-save-interval">Сохранить</button>
+      </div>
+      <p style="font-size: 11px; color: #94a3b8; margin-top: 6px;">Минимум 5, максимум 3600.</p>
+      <p id="interval-status" style="font-size: 11px; color: #16a34a; margin-top: 4px; display:none;">✓ Сохранено</p>
+    </div>
+
+    <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+    <div class="field">
+      <label>Логотип компании</label>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="file" id="logo-file" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="flex:1;max-width:280px;font-size:12px;">
+        <button class="secondary" id="btn-remove-logo" style="padding:6px 10px;font-size:12px;">Удалить</button>
+      </div>
+      <div id="logo-preview" style="margin-top:10px;"></div>
+      <p style="font-size:11px;color:#94a3b8;margin-top:6px;">
+        Любой размер, браузер сам уменьшит до 600×200. Показывается в шапке админки и на ТВ.
+      </p>
+      <p id="logo-status" style="font-size:11px;color:#16a34a;margin-top:4px;display:none;">✓ Сохранено</p>
+    </div>
+
+    <div class="modal-actions">
+      <div class="left"></div>
+      <div class="right">
+        <button class="secondary" id="btn-close-boards">Закрыть</button>
+        <button id="btn-create-board">Создать</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="columns-modal">
+  <div class="modal-box">
+    <h2>Настройка столбцов</h2>
+    <p style="font-size:12px;color:#64748b;margin-bottom:14px;">Столбец «Сотрудник» есть всегда. Настройте остальные столбцы таблицы.</p>
+    <div id="columns-list"></div>
+    <button class="secondary" id="btn-add-column" style="margin-top:8px;font-size:13px;">+ Добавить столбец</button>
+    <div class="modal-actions">
+      <div class="left"></div>
+      <div class="right">
+        <button class="secondary" id="btn-cancel-columns">Отмена</button>
+        <button id="btn-save-columns">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="users-modal">
+  <div class="modal-box" style="width:720px;">
+    <h2>Пользователи</h2>
+    <p style="font-size:12px;color:#64748b;margin-bottom:14px;">
+      Каждому выдаётся персональный код. Ссылка для входа: <code id="users-login-hint"></code>
+    </p>
+    <div id="users-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;"></div>
+
+    <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e8f0;">
+
+    <div style="display:grid;grid-template-columns:1fr 140px auto;gap:8px;align-items:end;">
+      <div class="field" style="margin:0;">
+        <label>Имя нового пользователя</label>
+        <input type="text" id="new-user-name" placeholder="Например, Гайк">
+      </div>
+      <div class="field" style="margin:0;">
+        <label>Роль</label>
+        <select id="new-user-role">
+          <option value="user">Пользователь</option>
+          <option value="admin">Администратор</option>
+        </select>
+      </div>
+      <button id="btn-create-user">Создать</button>
+    </div>
+
+    <div class="modal-actions">
+      <div class="left"></div>
+      <div class="right">
+        <button class="secondary" id="btn-close-users">Закрыть</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/common.js"></script>
+<script src="/js/admin.js"></script>
+
+</body>
+</html>
