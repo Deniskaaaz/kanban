@@ -531,3 +531,32 @@ body.dark .initials img { border: 1px solid #2f2f3a; }
     font-size: 11px !important; padding: 5px 8px !important;
   }
 }
+/* ============================================================
+   Пустые группы людей скрыты, пока не начнётся перетаскивание.
+   Во время drag — раскрываются как дроп-зоны.
+   ============================================================ */
+.person-group.group-collapsed {
+  display: none;
+}
+
+body.dragging-active .person-group.group-collapsed {
+  display: flex;
+  opacity: .55;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+body.dragging-active .person-group.group-collapsed .person-tasks {
+  min-height: 40px;
+}
+
+body.dragging-active .person-group.group-collapsed .person-tasks:empty {
+  background: transparent;
+}
+
+/* Тёмная тема */
+body.dark.dragging-active .person-group.group-collapsed {
+  border-color: #4b5563;
+  opacity: .35;
+}

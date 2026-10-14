@@ -653,7 +653,7 @@ function renderKulebin() {
     wrap.appendChild(row);
   });
 
-  const totals = computeTotals(people, columns);
+  const totals = computeTotals(people, columns, state.kulebin);
   const totalRow = document.createElement('div');
   totalRow.className = 'kulebin-row kulebin-total';
   totalRow.style.gridTemplateColumns = gridCols;
@@ -793,30 +793,6 @@ function buildTotalCell(col, totals) {
   cell.className = 'kulebin-cell';
   cell.dataset.label = col.label;
   return cell;
-}
-
-function computeTotals(people, columns) {
-  const totals = {};
-  columns.forEach(col => {
-    if (col.kind === 'amount') {
-      let sum = 0;
-      people.forEach(p => { const k = kulebinOf(p.id); const v = parseFloat(k.values ? k.values[col.key] : 0); if (!isNaN(v)) sum += v; });
-      totals[col.key] = { sum, totalPlan: (col.plan || 0) * people.length };
-    } else if (col.kind === 'efficiency') {
-      let sum = 0, cnt = 0;
-      people.forEach(p => { const k = kulebinOf(p.id); const v = parseInt(k.values ? k.values[col.key] : 0); if (!isNaN(v)) { sum += v; cnt++; } });
-      totals[col.key] = { avg: cnt ? Math.round(sum / cnt) : 0 };
-    } else if (col.kind === 'attendance') {
-      let sum = 0;
-      people.forEach(p => {
-        const k = kulebinOf(p.id);
-        const v = parseFloat(k.values ? k.values[col.key] : 0);
-        if (!isNaN(v)) sum += v;
-      });
-      totals[col.key] = { sum };
-    }
-  });
-  return totals;
 }
 
 function renderAmountCell(cell, rawVal, col) {
@@ -969,7 +945,7 @@ function renderKanban() {
 
         const tasks = byPerson[person.id] || [];
         if (!tasks.length) {
-          group.classList.add('empty-group');
+          group.classList.add('empty-group', 'group-collapsed');
         } else {
           tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
         }
@@ -1008,8 +984,12 @@ function renderKanban() {
       bubbleScroll: true,
       fallbackOnBody: true,
       swapThreshold: 0.65,
-      onStart: () => { document.querySelectorAll('.card').forEach(c => c.dataset.moved = ''); },
+      onStart: () => {
+        document.querySelectorAll('.card').forEach(c => c.dataset.moved = '');
+        document.body.classList.add('dragging-active');
+      },
       onEnd: async evt => {
+        document.body.classList.remove('dragging-active');
         evt.item.dataset.moved = '1';
         const planId = parseInt(evt.item.dataset.planId);
         const newHorizon = evt.to.dataset.horizon;
