@@ -118,7 +118,8 @@ button.danger:hover { background: #b91c1c; }
 .person-group-header .initials { width: 22px; height: 22px; font-size: 9px; }
 
 .person-tasks {
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex;
+  flex-direction: column; gap: 6px;
   min-height: 8px;
   padding: 2px;
   border-radius: 8px;
@@ -531,67 +532,20 @@ body.dark .initials img { border: 1px solid #2f2f3a; }
     font-size: 11px !important; padding: 5px 8px !important;
   }
 }
+
 /* ============================================================
-   Пустые группы людей скрыты, пока не начнётся перетаскивание.
-   Во время drag — раскрываются как дроп-зоны.
+   Drop-spacers — невидимые зоны приёма карточек между группами.
+   Задача меняет горизонт (колонку), ответственный сохраняется.
    ============================================================ */
-.person-group.group-collapsed {
-  display: none;
-}
-
-body.dragging-active .person-group.group-collapsed {
-  display: flex;
-  opacity: .55;
-  border: 1px dashed #cbd5e1;
-  border-radius: 8px;
-  padding: 6px 8px;
-}
-
-body.dragging-active .person-group.group-collapsed .person-tasks {
-  min-height: 40px;
-}
-
-body.dragging-active .person-group.group-collapsed .person-tasks:empty {
-  background: transparent;
-}
-
-/* Тёмная тема */
-body.dark.dragging-active .person-group.group-collapsed {
-  border-color: #4b5563;
-  opacity: .35;
-}
-/* ============================================================
-   Drop-spacer — невидимые зоны приёма карточек в колонке.
-   Позволяют бросить задачу в пустое место (не на группу):
-   горизонт меняется, ответственный остаётся прежним.
-   ============================================================ */
-.col-body-wrapper {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  scrollbar-width: thin;
-  scrollbar-color: #94a3b8 #e2e8f0;
-}
-.col-body-wrapper::-webkit-scrollbar { width: 8px; }
-.col-body-wrapper::-webkit-scrollbar-track { background: transparent; }
-.col-body-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
-.col-body-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
-
 .col-drop-spacer {
-  flex-shrink: 0;
-  height: 8px;
-  min-height: 8px;
-  border-radius: 6px;
-  transition: background .15s;
+  flex: 0 0 auto;
+  height: 2px;
+  margin: -4px 0;
+  border-radius: 4px;
 }
-.col-drop-spacer:last-child {
+.col-drop-spacer.grow {
   flex: 1 1 auto;
   height: auto;
   min-height: 24px;
+  margin: -4px 0 0;
 }
-
-body.dark .col-body-wrapper { scrollbar-color: #4b5563 #1a1d24; }
-body.dark .col-body-wrapper::-webkit-scrollbar-thumb { background: #4b5563; }

@@ -884,7 +884,7 @@ function editAttendanceCell(cell, personId, key, currentVal) {
   });
 }
 
-// ============ КАНБАН (с группировкой по людям) ============
+// ============ КАНБАН ============
 function renderKanban() {
   const existingForm = mainEl.querySelector('.add-form');
   if (existingForm) {
@@ -924,58 +924,61 @@ function renderKanban() {
         byPerson[p.person_id].push(p);
       });
 
-      const bodyWrapper = document.createElement('div');
-      bodyWrapper.className = 'col-body-wrapper';
-      bodyWrapper.dataset.horizon = h.key;
-
-      // spacer-хелпер: невидимая drop-зона
-      const makeSpacer = () => {
+      // Хелпер: невидимая drop-зона — прямой ребёнок .column, чтобы не ломать layout.
+      const makeSpacer = (isGrow) => {
         const sp = document.createElement('div');
-        sp.className = 'col-drop-spacer';
+        sp.className = 'col-drop-spacer' + (isGrow ? ' grow' : '');
         sp.dataset.horizon = h.key;
         return sp;
       };
 
-      bodyWrapper.appendChild(makeSpacer());
+      const peopleWithTasks = people.filter(p => (byPerson[p.id] || []).length > 0);
 
-      people.forEach(person => {
-        const tasks = byPerson[person.id] || [];
-        if (!tasks.length) return;
+      if (peopleWithTasks.length === 0) {
+        // Пустая колонка — один растущий spacer, вся высота под title = drop-зона.
+        col.appendChild(makeSpacer(true));
+      } else {
+        // Spacer сверху (перед первой группой)
+        col.appendChild(makeSpacer(false));
 
-        const group = document.createElement('div');
-        group.className = 'person-group';
-        group.dataset.personId = person.id;
+        peopleWithTasks.forEach((person, idx) => {
+          const tasks = byPerson[person.id];
 
-        const header = document.createElement('div');
-        header.className = 'person-group-header';
-        header.innerHTML = `${avatarHtml(person, 'sm', colorOf(person.id))}<span>${escapeHtml(person.name)}</span>`;
-        header.addEventListener('click', (e) => {
-          if (!isRealClick(e, header)) return;
-          openPersonModal(person.id);
+          const group = document.createElement('div');
+          group.className = 'person-group';
+          group.dataset.personId = person.id;
+
+          const header = document.createElement('div');
+          header.className = 'person-group-header';
+          header.innerHTML = `${avatarHtml(person, 'sm', colorOf(person.id))}<span>${escapeHtml(person.name)}</span>`;
+          header.addEventListener('click', (e) => {
+            if (!isRealClick(e, header)) return;
+            openPersonModal(person.id);
+          });
+          group.appendChild(header);
+
+          const tasksWrap = document.createElement('div');
+          tasksWrap.className = 'person-tasks';
+          tasksWrap.dataset.personId = person.id;
+          tasksWrap.dataset.horizon = h.key;
+
+          tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
+
+          group.appendChild(tasksWrap);
+          col.appendChild(group);
+
+          // Spacer после каждой группы; последний — растягивается.
+          const isLast = idx === peopleWithTasks.length - 1;
+          col.appendChild(makeSpacer(isLast));
         });
-        group.appendChild(header);
-
-        const tasksWrap = document.createElement('div');
-        tasksWrap.className = 'person-tasks';
-        tasksWrap.dataset.personId = person.id;
-        tasksWrap.dataset.horizon = h.key;
-
-        tasks.forEach(t => tasksWrap.appendChild(buildPlanCard(t)));
-
-        group.appendChild(tasksWrap);
-        bodyWrapper.appendChild(group);
-
-        bodyWrapper.appendChild(makeSpacer());
-      });
+      }
 
       if (hiddenCount && !showArchive) {
         const note = document.createElement('div');
         note.className = 'archived-notice';
         note.textContent = '+ ' + hiddenCount + ' в архиве';
-        bodyWrapper.appendChild(note);
+        col.appendChild(note);
       }
-
-      col.appendChild(bodyWrapper);
 
       const addBtn = document.createElement('button');
       addBtn.className = 'add-task-btn';
@@ -1027,7 +1030,8 @@ function renderKanban() {
     sortables.push(s);
   });
 
-  // ---- Sortable на drop-spacer-ах: приём в пустое место колонки ----
+  // ---- Sortable на spacers: приём в пустое место колонки ----
+  // Задача меняет горизонт, ответственный остаётся прежним.
   document.querySelectorAll('.col-drop-spacer').forEach(spacer => {
     const s = Sortable.create(spacer, {
       group: { name: 'plans', put: true, pull: false },
