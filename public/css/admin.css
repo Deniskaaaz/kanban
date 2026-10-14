@@ -560,3 +560,38 @@ body.dark.dragging-active .person-group.group-collapsed {
   border-color: #4b5563;
   opacity: .35;
 }
+/* ============================================================
+   Drop-spacer — невидимые зоны приёма карточек в колонке.
+   Позволяют бросить задачу в пустое место (не на группу):
+   горизонт меняется, ответственный остаётся прежним.
+   ============================================================ */
+.col-body-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #e2e8f0;
+}
+.col-body-wrapper::-webkit-scrollbar { width: 8px; }
+.col-body-wrapper::-webkit-scrollbar-track { background: transparent; }
+.col-body-wrapper::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+.col-body-wrapper::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
+.col-drop-spacer {
+  flex-shrink: 0;
+  height: 8px;
+  min-height: 8px;
+  border-radius: 6px;
+  transition: background .15s;
+}
+.col-drop-spacer:last-child {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 24px;
+}
+
+body.dark .col-body-wrapper { scrollbar-color: #4b5563 #1a1d24; }
+body.dark .col-body-wrapper::-webkit-scrollbar-thumb { background: #4b5563; }

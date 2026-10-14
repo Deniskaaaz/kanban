@@ -928,9 +928,18 @@ function renderKanban() {
       bodyWrapper.className = 'col-body-wrapper';
       bodyWrapper.dataset.horizon = h.key;
 
+      // spacer-хелпер: невидимая drop-зона
+      const makeSpacer = () => {
+        const sp = document.createElement('div');
+        sp.className = 'col-drop-spacer';
+        sp.dataset.horizon = h.key;
+        return sp;
+      };
+
+      bodyWrapper.appendChild(makeSpacer());
+
       people.forEach(person => {
         const tasks = byPerson[person.id] || [];
-        // Пустые группы полностью скрыты — не создаём DOM-узел.
         if (!tasks.length) return;
 
         const group = document.createElement('div');
@@ -955,6 +964,8 @@ function renderKanban() {
 
         group.appendChild(tasksWrap);
         bodyWrapper.appendChild(group);
+
+        bodyWrapper.appendChild(makeSpacer());
       });
 
       if (hiddenCount && !showArchive) {
@@ -975,7 +986,7 @@ function renderKanban() {
     boardDiv.appendChild(col);
   });
 
-  // ---- Sortable на каждой группе задач: перетаскивание между людьми и колонками ----
+  // ---- Sortable на группах: перетаскивание между людьми и колонками ----
   document.querySelectorAll('.person-tasks').forEach(tw => {
     const s = Sortable.create(tw, {
       group: 'plans',
@@ -1001,12 +1012,6 @@ function renderKanban() {
         const newPersonId = toIsTasks ? parseInt(evt.to.dataset.personId) : plan.person_id;
         const newIndex = toIsTasks ? evt.newIndex : null;
 
-        // Если задача упала вне группы (в пустое место колонки) — SortableJS
-        // вставил её как временный DOM-узел. Убираем, ждём перерисовки от сокета.
-        if (!toIsTasks) {
-          evt.item.remove();
-        }
-
         const body = { horizon: newHorizon, person_id: newPersonId };
         if (newIndex !== null) body.position = newIndex * 100;
 
@@ -1022,22 +1027,19 @@ function renderKanban() {
     sortables.push(s);
   });
 
-  // ---- Sortable на колонке целиком: ловит drop в пустое место (не на группу) ----
-  // put: true — принимает; pull: false — сам ничего не отдаёт (отдают только .person-tasks).
-  document.querySelectorAll('.col-body-wrapper').forEach(wrapper => {
-    const s = Sortable.create(wrapper, {
+  // ---- Sortable на drop-spacer-ах: приём в пустое место колонки ----
+  document.querySelectorAll('.col-drop-spacer').forEach(spacer => {
+    const s = Sortable.create(spacer, {
       group: { name: 'plans', put: true, pull: false },
       animation: 150,
       ghostClass: 'dragging',
-      draggable: '.card',
       onAdd: async evt => {
+        evt.item.remove();
         const planId = parseInt(evt.item.dataset.planId);
-        evt.item.remove();   // убираем временный DOM-узел
         if (!planId) return;
         const plan = state.plans.find(p => p.id === planId);
         if (!plan) return;
-
-        const horizon = wrapper.dataset.horizon;
+        const horizon = spacer.dataset.horizon;
         if (!horizon) return;
 
         try {
