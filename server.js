@@ -36,13 +36,26 @@ function generateToken() {
 }
 
 // ============ AUTH MIDDLEWARE ============
+// Кэш последнего обновления last_seen_at: userId → timestamp (ms).
+// Обновляем не чаще LAST_SEEN_DEBOUNCE_MS на юзера — снижает нагрузку на WAL.
+const LAST_SEEN_DEBOUNCE_MS = 60 * 1000;
+const _lastSeenCache = new Map();
+
+function touchLastSeen(userId) {
+  const now = Date.now();
+  const last = _lastSeenCache.get(userId) || 0;
+  if (now - last < LAST_SEEN_DEBOUNCE_MS) return;
+  _lastSeenCache.set(userId, now);
+  db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(userId);
+}
+
 function getUserFromReq(req) {
   let token = parseCookies(req.headers.cookie || '').auth_token;
   if (!token && req.query.token) token = String(req.query.token);
   if (!token) return null;
   const user = db.prepare('SELECT * FROM users WHERE token = ?').get(token);
   if (!user) return null;
-  db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
+  touchLastSeen(user.id);
   return user;
 }
 
@@ -121,7 +134,7 @@ app.get('/login', (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE token = ?').get(String(req.query.token));
     if (user) {
       setCookie(res, 'auth_token', user.token, 365 * 24 * 60 * 60);
-      db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
+      touchLastSeen(user.id);
       return res.redirect('/admin');
     }
   }
@@ -134,7 +147,7 @@ app.post('/login', (req, res) => {
   const user = db.prepare('SELECT * FROM users WHERE token = ?').get(token);
   if (!user) return res.redirect('/login?error=1');
   setCookie(res, 'auth_token', user.token, 365 * 24 * 60 * 60);
-  db.prepare("UPDATE users SET last_seen_at = datetime('now') WHERE id = ?").run(user.id);
+  touchLastSeen(user.id);
   res.redirect('/admin');
 });
 
@@ -187,6 +200,15 @@ function filterForUser(state, user, boardAccess) {
 function broadcast(actorName) {
   const all = getBoardState();
   io.sockets.sockets.forEach(socket => {
+    // Пересчитываем актуального юзера и его boardAccess —
+    // чтобы смена роли/доступа подхватилась на живом сокете без перелогина.
+    let user = null;
+    if (socket.user && socket.user.id) {
+      user = db.prepare('SELECT * FROM users WHERE id = ?').get(socket.user.id) || null;
+    }
+    socket.user = user;
+    socket.boardAccess = user ? userBoardAccess(user) : [];
+
     if (actorName) {
       socket.emit('board:actor', { name: actorName, at: Date.now() });
     }
@@ -206,7 +228,6 @@ app.get('/api/me', (req, res) => {
     id: req.user.id,
     name: req.user.name,
     role: req.user.role,
-    token: req.user.token,
     board_access: req.boardAccess,
   });
 });
@@ -227,7 +248,7 @@ app.post('/api/users', requireAdmin, (req, res) => {
   const r = role === 'admin' ? 'admin' : 'user';
   const token = generateToken();
   const info = db.prepare('INSERT INTO users (name, token, role) VALUES (?, ?, ?)').run(name, token, r);
-  broadcast(req.user.name);
+  // broadcast не нужен: список юзеров тянется через GET /api/users, а доски не изменились.
   res.json({ id: info.lastInsertRowid, name, token, role: r });
 });
 
@@ -240,6 +261,7 @@ app.put('/api/users/:id', requireAdmin, (req, res) => {
   if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
   params.push(req.params.id);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
+  // broadcast — чтобы у самого юзера (если меняли роль) обновился список досок на живом сокете.
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -249,14 +271,15 @@ app.delete('/api/users/:id', requireAdmin, (req, res) => {
   if (id === req.user.id) return res.status(400).json({ error: 'Нельзя удалить себя' });
   db.prepare('DELETE FROM board_access WHERE user_id = ?').run(id);
   db.prepare('DELETE FROM users WHERE id = ?').run(id);
-  broadcast(req.user.name);
+  _lastSeenCache.delete(id);
+  // broadcast не нужен: доски не изменились, а удалённого юзера сокет всё равно отвалится.
   res.json({ ok: true });
 });
 
 app.post('/api/users/:id/regenerate-token', requireAdmin, (req, res) => {
   const token = generateToken();
   db.prepare('UPDATE users SET token = ? WHERE id = ?').run(token, req.params.id);
-  broadcast(req.user.name);
+  // broadcast не нужен: state досок не меняется.
   res.json({ ok: true, token });
 });
 
@@ -266,6 +289,7 @@ app.put('/api/users/:id/boards', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM board_access WHERE user_id = ?').run(req.params.id);
   const stmt = db.prepare('INSERT OR IGNORE INTO board_access (user_id, board_id) VALUES (?, ?)');
   board_ids.forEach(bid => stmt.run(req.params.id, parseInt(bid)));
+  // broadcast — юзеру надо сразу увидеть/потерять доски.
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -544,11 +568,11 @@ io.on('connection', socket => {
   const cookies = parseCookies(socket.request.headers.cookie || '');
   const token = cookies.auth_token;
   const user = token ? db.prepare('SELECT * FROM users WHERE token = ?').get(token) : null;
-  socket.user = user;
+  socket.user = user || null;
   socket.boardAccess = user ? userBoardAccess(user) : [];
 
   const all = getBoardState();
-  socket.emit('board:update', filterForUser(all, user, socket.boardAccess));
+  socket.emit('board:update', filterForUser(all, socket.user, socket.boardAccess));
 });
 
 app.get('/healthz', (req, res) => res.json({ ok: true }));
