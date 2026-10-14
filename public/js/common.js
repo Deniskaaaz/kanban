@@ -57,9 +57,19 @@ function attendanceColor(v) {
 }
 
 // ===== Даты =====
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function formatDate(d) {
+  return pad(d.getDate()) + '.' + pad(d.getMonth() + 1) + '.' + d.getFullYear();
+}
+
+function formatDateTime(d) {
+  return formatDate(d) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
 function todayISO() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
 }
 
 function dayDiff(iso) {
@@ -88,7 +98,7 @@ function dueLabel(iso) {
   if (d === 1) return 'завтра';
   if (d <= 7) return 'через ' + d + ' дн.';
   const dt = new Date(iso + 'T00:00:00');
-  return String(dt.getDate()).padStart(2, '0') + '.' + String(dt.getMonth() + 1).padStart(2, '0');
+  return pad(dt.getDate()) + '.' + pad(dt.getMonth() + 1);
 }
 
 // ===== Проценты =====
@@ -96,6 +106,45 @@ function calcPercent(value, plan) {
   if (!plan || plan <= 0) return null;
   const v = parseFloat(value) || 0;
   return Math.min(999, Math.round((v / plan) * 100));
+}
+
+// ===== Итоги таблицы (Кулибин) =====
+// people   — массив сотрудников доски
+// columns  — конфиг столбцов (col.kind: 'amount' | 'efficiency' | 'attendance' | 'text')
+// kulebin  — массив { person_id, values: {...} }
+function computeTotals(people, columns, kulebin) {
+  const totals = {};
+  const byPerson = new Map();
+  (kulebin || []).forEach(k => byPerson.set(k.person_id, k.values || {}));
+
+  columns.forEach(col => {
+    if (col.kind === 'amount') {
+      let sum = 0;
+      people.forEach(p => {
+        const values = byPerson.get(p.id) || {};
+        const v = parseFloat(values[col.key]);
+        if (!isNaN(v)) sum += v;
+      });
+      totals[col.key] = { sum, totalPlan: (col.plan || 0) * people.length };
+    } else if (col.kind === 'efficiency') {
+      let sum = 0, cnt = 0;
+      people.forEach(p => {
+        const values = byPerson.get(p.id) || {};
+        const v = parseInt(values[col.key]);
+        if (!isNaN(v)) { sum += v; cnt++; }
+      });
+      totals[col.key] = { avg: cnt ? Math.round(sum / cnt) : 0 };
+    } else if (col.kind === 'attendance') {
+      let sum = 0;
+      people.forEach(p => {
+        const values = byPerson.get(p.id) || {};
+        const v = parseFloat(values[col.key]);
+        if (!isNaN(v)) sum += v;
+      });
+      totals[col.key] = { sum };
+    }
+  });
+  return totals;
 }
 
 // ===== Архив =====
