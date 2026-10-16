@@ -335,3 +335,240 @@ body.night .initials { color: #ffffff; }
 .card.person-card .initials { width: 48px; height: 48px; font-size: 16px; }
 
 body.night .initials img { border: 1px solid #2f2f3a; }
+
+/* ============================================================
+   Индикатор ротации в шапке ТВ
+   ============================================================ */
+.rotate-badge {
+  display: inline-block;
+  font-size: 22px;
+  line-height: 1;
+  margin-left: 6px;
+  vertical-align: middle;
+  transition: opacity .2s;
+}
+.rotate-badge.rotating {
+  animation: rotatePulse 2.4s ease-in-out infinite;
+}
+.rotate-badge.locked {
+  opacity: .9;
+}
+body.night .rotate-badge { opacity: .85; }
+body.night .rotate-badge.locked { opacity: 1; }
+
+@keyframes rotatePulse {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(180deg); }
+}
+
+/* ============================================================
+   Прогресс-полоска до следующей ротации
+   ============================================================ */
+.rotate-progress {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  height: 4px;
+  width: 0%;
+  background: linear-gradient(90deg, #7c3aed, #a78bfa);
+  z-index: 100;
+  opacity: 0;
+  transition: opacity .3s;
+  pointer-events: none;
+}
+body.night .rotate-progress {
+  background: linear-gradient(90deg, #a78bfa, #c4b5fd);
+}
+
+/* ============================================================
+   Крупные счётчики в шапке — видно с 5 метров
+   ============================================================ */
+.alert-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  line-height: 1;
+}
+.alert-pill .pill-icon {
+  font-size: 26px;
+  line-height: 1;
+}
+.alert-pill .pill-num {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -1px;
+  line-height: 1;
+  min-width: 34px;
+  text-align: center;
+}
+.alert-pill .pill-label {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  opacity: .75;
+}
+
+/* ============================================================
+   Пять улучшений ТВ
+   ============================================================ */
+
+/* 1) Fade при смене доски */
+#main-area {
+  transition: opacity .25s ease-out;
+}
+
+/* 4) Крупное название доски */
+.board-name {
+  font-size: 32px !important;
+  padding: 6px 18px !important;
+  letter-spacing: 0.5px !important;
+  border-radius: 12px !important;
+}
+body.night .board-name {
+  font-size: 32px !important;
+}
+
+/* 2) Подсветка новых задач */
+.task {
+  transition: background-color .5s ease-out, transform .3s ease-out;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+.task.task-new {
+  background-color: #bbf7d0;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, .25);
+  transform: scale(1.02);
+}
+body.night .task.task-new {
+  background-color: #14532d;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, .35);
+}
+
+/* 3) Индикатор «последнее обновление» — правый нижний угол */
+.last-update {
+  position: fixed;
+  bottom: 8px;
+  right: 14px;
+  font-size: 11px;
+  font-family: -apple-system, 'Segoe UI', sans-serif;
+  color: #94a3b8;
+  z-index: 99;
+  pointer-events: none;
+  user-select: none;
+}
+.last-update.stale { color: #dc2626; font-weight: 600; }
+body.night .last-update { color: #4b5563; }
+body.night .last-update.stale { color: #f87171; }
+
+/* 5) Топ-3 сотрудника недели — правый нижний угол, над индикатором */
+.top-week {
+  position: fixed;
+  bottom: 34px;
+  right: 14px;
+  background: rgba(255, 255, 255, .92);
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  min-width: 180px;
+  z-index: 99;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, .08);
+  backdrop-filter: blur(6px);
+}
+.top-week-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #7c3aed;
+  margin-bottom: 8px;
+}
+.top-week-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  padding: 2px 0;
+}
+.top-week-medal { font-size: 16px; flex-shrink: 0; }
+.top-week-name { flex: 1; color: #475569; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top-week-count { font-weight: 800; color: #1e293b; min-width: 22px; text-align: right; }
+
+body.night .top-week {
+  background: rgba(35, 35, 42, .92);
+  border-color: #2f2f3a;
+}
+body.night .top-week-title { color: #a78bfa; }
+body.night .top-week-name { color: #cbd5e1; }
+body.night .top-week-count { color: #e5e7eb; }
+
+/* ============================================================
+   Три улучшения: просрочка, появление, bump счётчиков
+   ============================================================ */
+
+/* 1) Просроченные задачи — пульсирующая красная обводка */
+.task.task-overdue {
+  animation: overduePulse 2.2s ease-in-out infinite;
+  border-radius: 6px;
+}
+@keyframes overduePulse {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px rgba(220, 38, 38, .35);
+    background-color: transparent;
+  }
+  50% {
+    box-shadow: inset 0 0 0 3px rgba(220, 38, 38, .75);
+    background-color: rgba(254, 226, 226, .55);
+  }
+}
+body.night .task.task-overdue {
+  animation-name: overduePulseNight;
+}
+@keyframes overduePulseNight {
+  0%, 100% {
+    box-shadow: inset 0 0 0 2px rgba(248, 113, 113, .4);
+    background-color: transparent;
+  }
+  50% {
+    box-shadow: inset 0 0 0 3px rgba(248, 113, 113, .8);
+    background-color: rgba(127, 29, 29, .35);
+  }
+}
+
+/* 2) Анимация появления новых задач */
+.task.task-enter {
+  animation: taskEnter .4s cubic-bezier(.34, 1.56, .64, 1);
+}
+@keyframes taskEnter {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* 3) Bump счётчиков при изменении значения */
+.pill-num.bump {
+  animation: bumpNum .5s ease-out;
+}
+@keyframes bumpNum {
+  0%   { transform: scale(1);    color: inherit; }
+  35%  { transform: scale(1.35); color: #16a34a; }
+  70%  { transform: scale(.95);  color: #16a34a; }
+  100% { transform: scale(1);    color: inherit; }
+}
+body.night .pill-num.bump {
+  animation-name: bumpNumNight;
+}
+@keyframes bumpNumNight {
+  0%   { transform: scale(1);    color: inherit; }
+  35%  { transform: scale(1.35); color: #4ade80; }
+  70%  { transform: scale(.95);  color: #4ade80; }
+  100% { transform: scale(1);    color: inherit; }
+}
+
+/* .pill-num должен быть inline-block для transform */
+.alert-pill .pill-num {
+  display: inline-block;
+}

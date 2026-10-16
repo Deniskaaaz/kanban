@@ -5,7 +5,7 @@ const path = require('path');
 const crypto = require('crypto');
 const db = require('./db');
 
-const PORT = 8989;
+const PORT = parseInt(process.env.PORT) || 8989;
 
 const app = express();
 const server = http.createServer(app);
@@ -36,8 +36,6 @@ function generateToken() {
 }
 
 // ============ AUTH MIDDLEWARE ============
-// Кэш последнего обновления last_seen_at: userId → timestamp (ms).
-// Обновляем не чаще LAST_SEEN_DEBOUNCE_MS на юзера — снижает нагрузку на WAL.
 const LAST_SEEN_DEBOUNCE_MS = 60 * 1000;
 const _lastSeenCache = new Map();
 
@@ -178,9 +176,10 @@ function getBoardState() {
     try { values = k.values_json ? JSON.parse(k.values_json) : {}; } catch (e) {}
     return { person_id: k.person_id, values, updated_at: k.updated_at };
   });
+  const best = db.prepare('SELECT * FROM best_employees ORDER BY board_id, place, id').all();
   const settings = {};
   db.prepare('SELECT key, value FROM settings').all().forEach(r => settings[r.key] = r.value);
-  return { boards, people, plans, kulebin, settings };
+  return { boards, people, plans, kulebin, best, settings };
 }
 
 function filterForUser(state, user, boardAccess) {
@@ -193,6 +192,7 @@ function filterForUser(state, user, boardAccess) {
     people: peopleFiltered,
     plans: state.plans.filter(p => allowed.has(p.board_id)),
     kulebin: state.kulebin.filter(k => peopleIds.has(k.person_id)),
+    best: (state.best || []).filter(b => allowed.has(b.board_id)),
     settings: state.settings,
   };
 }
@@ -200,8 +200,6 @@ function filterForUser(state, user, boardAccess) {
 function broadcast(actorName) {
   const all = getBoardState();
   io.sockets.sockets.forEach(socket => {
-    // Пересчитываем актуального юзера и его boardAccess —
-    // чтобы смена роли/доступа подхватилась на живом сокете без перелогина.
     let user = null;
     if (socket.user && socket.user.id) {
       user = db.prepare('SELECT * FROM users WHERE id = ?').get(socket.user.id) || null;
@@ -248,7 +246,6 @@ app.post('/api/users', requireAdmin, (req, res) => {
   const r = role === 'admin' ? 'admin' : 'user';
   const token = generateToken();
   const info = db.prepare('INSERT INTO users (name, token, role) VALUES (?, ?, ?)').run(name, token, r);
-  // broadcast не нужен: список юзеров тянется через GET /api/users, а доски не изменились.
   res.json({ id: info.lastInsertRowid, name, token, role: r });
 });
 
@@ -261,7 +258,6 @@ app.put('/api/users/:id', requireAdmin, (req, res) => {
   if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
   params.push(req.params.id);
   db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...params);
-  // broadcast — чтобы у самого юзера (если меняли роль) обновился список досок на живом сокете.
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -272,14 +268,12 @@ app.delete('/api/users/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM board_access WHERE user_id = ?').run(id);
   db.prepare('DELETE FROM users WHERE id = ?').run(id);
   _lastSeenCache.delete(id);
-  // broadcast не нужен: доски не изменились, а удалённого юзера сокет всё равно отвалится.
   res.json({ ok: true });
 });
 
 app.post('/api/users/:id/regenerate-token', requireAdmin, (req, res) => {
   const token = generateToken();
   db.prepare('UPDATE users SET token = ? WHERE id = ?').run(token, req.params.id);
-  // broadcast не нужен: state досок не меняется.
   res.json({ ok: true, token });
 });
 
@@ -289,7 +283,6 @@ app.put('/api/users/:id/boards', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM board_access WHERE user_id = ?').run(req.params.id);
   const stmt = db.prepare('INSERT OR IGNORE INTO board_access (user_id, board_id) VALUES (?, ?)');
   board_ids.forEach(bid => stmt.run(req.params.id, parseInt(bid)));
-  // broadcast — юзеру надо сразу увидеть/потерять доски.
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -305,7 +298,7 @@ app.post('/api/boards', requireAdmin, (req, res) => {
   const { name, type } = req.body;
   if (!name) return res.status(400).json({ error: 'name required' });
   const maxSort = db.prepare('SELECT COALESCE(MAX(sort),0) AS m FROM boards').get().m;
-  const t = (type === 'kulebin') ? 'kulebin' : 'kanban';
+  const t = (type === 'kulebin') ? 'kulebin' : (type === 'best' ? 'best' : 'kanban');
   const defaultCols = t === 'kulebin' ? JSON.stringify([
     { key: 'c1', label: 'План 1', kind: 'text' },
     { key: 'c2', label: 'План 2', kind: 'text' },
@@ -360,7 +353,13 @@ app.delete('/api/boards/:id', requireAdmin, (req, res) => {
   });
   db.prepare('DELETE FROM people WHERE board_id = ?').run(id);
   db.prepare('DELETE FROM board_access WHERE board_id = ?').run(id);
+  db.prepare('DELETE FROM best_employees WHERE board_id = ?').run(id);
   db.prepare('DELETE FROM boards WHERE id = ?').run(id);
+  // если ТВ был зафиксирован на эту доску — снимаем фиксацию
+  const lock = db.prepare("SELECT value FROM settings WHERE key = 'tv_lock_board_id'").get();
+  if (lock && parseInt(lock.value) === id) {
+    db.prepare("DELETE FROM settings WHERE key = 'tv_lock_board_id'").run();
+  }
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -415,6 +414,79 @@ app.delete('/api/people/:id', (req, res) => {
   db.prepare('DELETE FROM kulebin WHERE person_id = ?').run(req.params.id);
   db.prepare('DELETE FROM plans WHERE person_id = ?').run(req.params.id);
   db.prepare('DELETE FROM people WHERE id = ?').run(req.params.id);
+  broadcast(req.user.name);
+  res.json({ ok: true });
+});
+
+// ============ BEST EMPLOYEES (Отличники службы) ============
+app.get('/api/best', (req, res) => {
+  const boardId = parseInt(req.query.board_id) || 0;
+  let rows;
+  if (boardId) {
+    if (!checkBoardAccess(req, boardId)) return res.status(403).json({ error: 'forbidden' });
+    rows = db.prepare('SELECT * FROM best_employees WHERE board_id = ? ORDER BY place, id').all(boardId);
+  } else {
+    rows = db.prepare('SELECT * FROM best_employees ORDER BY board_id, place, id').all();
+    if (req.user.role !== 'admin') {
+      rows = rows.filter(r => req.boardAccess.includes(r.board_id));
+    }
+  }
+  res.json(rows);
+});
+
+app.post('/api/best', (req, res) => {
+  const { board_id, place, name, comment, avatar } = req.body;
+  const boardId = parseInt(board_id);
+  if (!boardId) return res.status(400).json({ error: 'board_id required' });
+  if (!checkBoardAccess(req, boardId)) return res.status(403).json({ error: 'forbidden' });
+  const p = parseInt(place);
+  if (![1, 2, 3].includes(p)) return res.status(400).json({ error: 'place must be 1, 2 or 3' });
+  if (!name || !String(name).trim()) return res.status(400).json({ error: 'name required' });
+
+  // Не допускаем дубль места на одной доске
+  const existing = db.prepare('SELECT id FROM best_employees WHERE board_id = ? AND place = ?').get(boardId, p);
+  if (existing) return res.status(409).json({ error: 'Место уже занято' });
+
+  const info = db.prepare(
+    'INSERT INTO best_employees (board_id, place, name, comment, avatar) VALUES (?, ?, ?, ?, ?)'
+  ).run(boardId, p, String(name).trim(), String(comment || ''), String(avatar || ''));
+  broadcast(req.user.name);
+  res.json({ id: info.lastInsertRowid });
+});
+
+app.put('/api/best/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM best_employees WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  if (!checkBoardAccess(req, row.board_id)) return res.status(403).json({ error: 'forbidden' });
+
+  const { place, name, comment, avatar } = req.body;
+  const fields = [];
+  const params = [];
+  if (place !== undefined) {
+    const p = parseInt(place);
+    if (![1, 2, 3].includes(p)) return res.status(400).json({ error: 'place must be 1, 2 or 3' });
+    const clash = db.prepare('SELECT id FROM best_employees WHERE board_id = ? AND place = ? AND id != ?').get(row.board_id, p, row.id);
+    if (clash) return res.status(409).json({ error: 'Место уже занято' });
+    fields.push('place = ?'); params.push(p);
+  }
+  if (name !== undefined)    { fields.push('name = ?');    params.push(String(name).trim()); }
+  if (comment !== undefined) { fields.push('comment = ?'); params.push(String(comment)); }
+  if (avatar !== undefined)  { fields.push('avatar = ?');  params.push(String(avatar)); }
+  if (!fields.length) return res.status(400).json({ error: 'nothing to update' });
+
+  params.push(req.params.id);
+  db.prepare(
+    `UPDATE best_employees SET ${fields.join(', ')}, updated_at = datetime('now') WHERE id = ?`
+  ).run(...params);
+  broadcast(req.user.name);
+  res.json({ ok: true });
+});
+
+app.delete('/api/best/:id', (req, res) => {
+  const row = db.prepare('SELECT * FROM best_employees WHERE id = ?').get(req.params.id);
+  if (!row) return res.status(404).json({ error: 'not found' });
+  if (!checkBoardAccess(req, row.board_id)) return res.status(403).json({ error: 'forbidden' });
+  db.prepare('DELETE FROM best_employees WHERE id = ?').run(req.params.id);
   broadcast(req.user.name);
   res.json({ ok: true });
 });
@@ -559,6 +631,24 @@ app.put('/api/settings', requireAdmin, (req, res) => {
   if (!updates || typeof updates !== 'object') return res.status(400).json({ error: 'body required' });
   const stmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   Object.entries(updates).forEach(([k, v]) => stmt.run(k, String(v)));
+  broadcast(req.user.name);
+  res.json({ ok: true });
+});
+
+// ============ TV LOCK ============
+app.put('/api/tv/lock', requireAdmin, (req, res) => {
+  const { board_id } = req.body;
+
+  if (board_id === null || board_id === undefined || board_id === '') {
+    db.prepare("DELETE FROM settings WHERE key = 'tv_lock_board_id'").run();
+  } else {
+    const bid = parseInt(board_id);
+    if (!bid) return res.status(400).json({ error: 'invalid board_id' });
+    const b = db.prepare('SELECT id FROM boards WHERE id = ?').get(bid);
+    if (!b) return res.status(404).json({ error: 'board not found' });
+    db.prepare("INSERT INTO settings (key, value) VALUES ('tv_lock_board_id', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+      .run(String(bid));
+  }
   broadcast(req.user.name);
   res.json({ ok: true });
 });

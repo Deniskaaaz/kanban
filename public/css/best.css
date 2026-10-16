@@ -1,0 +1,526 @@
+/* ============================================================
+   best.css — «Отличники службы» в стиле ПОСТЕР.
+   Фото на всю карточку, снизу градиент с ФИО и текстом.
+   Карточки вписываются в высоту видимой области.
+   ============================================================ */
+
+/* ===== Общий контейнер ===== */
+.best-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 8px 4px 24px;
+  min-height: 0;
+}
+
+.best-header {
+  text-align: center;
+  padding: 8px 0 0;
+  flex-shrink: 0;
+}
+.best-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #7c3aed;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  margin: 0;
+}
+.best-header .best-sub {
+  font-size: 13px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+/* ===== Подиум ===== */
+.best-podium {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr 1fr;
+  gap: 18px;
+  align-items: stretch;
+  padding: 20px 8px 0;
+  /* Высота карточек = высота видимой области минус всё что над и под */
+  max-height: calc(100vh - 180px);
+  min-height: 0;
+}
+
+/* ===== Карточка-постер ===== */
+.best-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 22px 18px 20px;
+  background: #0f1115;
+  color: #fff;
+  cursor: pointer;
+  transition: transform .25s, box-shadow .25s;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .12);
+  min-height: 320px;
+  max-height: calc(100vh - 200px);
+}
+.best-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, .22);
+}
+
+/* Разный минимальный размер для 1-2-3 места */
+.best-card.place-1 { min-height: 380px; }
+.best-card.place-2 { min-height: 340px; }
+.best-card.place-3 { min-height: 320px; }
+
+/* ===== Фото на всю карточку ===== */
+.best-avatar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Фолбэк — фиолетовый градиент с инициалами */
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  color: #fff;
+  font-size: 96px;
+  font-weight: 800;
+  letter-spacing: 4px;
+}
+.best-avatar img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+/* ===== Градиент снизу ===== */
+.best-card::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 70%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to top,
+    rgba(0, 0, 0, .92) 0%,
+    rgba(0, 0, 0, .78) 25%,
+    rgba(0, 0, 0, .45) 55%,
+    rgba(0, 0, 0, 0) 100%
+  );
+}
+
+/* ===== Текст поверх градиента ===== */
+.best-name {
+  position: relative;
+  z-index: 3;
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  text-align: left;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, .55);
+  word-break: break-word;
+  margin: 0 0 6px;
+}
+.best-comment {
+  position: relative;
+  z-index: 3;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, .88);
+  text-align: left;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, .55);
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ===== Медаль в левом верхнем углу ===== */
+.best-medal {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: #fff;
+  border: 3px solid rgba(255, 255, 255, .9);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+  background: #64748b;
+}
+.best-card.place-1 .best-medal { background: linear-gradient(135deg, #fbbf24, #f59e0b); }
+.best-card.place-2 .best-medal { background: linear-gradient(135deg, #cbd5e1, #94a3b8); }
+.best-card.place-3 .best-medal { background: linear-gradient(135deg, #d97706, #b45309); }
+
+.best-card.place-1 .best-medal::before { content: '🥇'; }
+.best-card.place-2 .best-medal::before { content: '🥈'; }
+.best-card.place-3 .best-medal::before { content: '🥉'; }
+
+/* ===== Кнопки редактирования (только админка) ===== */
+.best-card .best-actions {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  transition: opacity .15s;
+}
+.best-card:hover .best-actions { opacity: 1; }
+.best-actions button {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, .92);
+  color: #334155;
+  backdrop-filter: blur(4px);
+  transition: background .15s, color .15s;
+}
+.best-actions button:hover { background: #fff; }
+.best-actions button.danger { background: rgba(254, 202, 202, .95); color: #b91c1c; }
+.best-actions button.danger:hover { background: #fca5a5; }
+
+/* ===== Пустой слот ===== */
+.best-card.empty {
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  color: #94a3b8;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+  cursor: pointer;
+  box-shadow: none;
+}
+.best-card.empty::after { display: none; }
+.best-card.empty:hover {
+  border-color: #7c3aed;
+  background: #faf5ff;
+  transform: translateY(-3px);
+}
+.best-card.empty .best-empty-icon {
+  font-size: 44px;
+  color: #cbd5e1;
+  margin-bottom: 8px;
+  line-height: 1;
+  font-weight: 300;
+}
+.best-card.empty .best-empty-text {
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+/* ===== Тёмная тема админки ===== */
+body.dark .best-header h2 { color: #a78bfa; }
+body.dark .best-header .best-sub { color: #6b7280; }
+body.dark .best-card.empty { background: #1a1d24; border-color: #2f2f3a; }
+body.dark .best-card.empty:hover { background: #1e1b33; border-color: #7c3aed; }
+body.dark .best-card.empty .best-empty-icon { color: #4b5563; }
+body.dark .best-card.empty .best-empty-text { color: #6b7280; }
+body.dark .best-actions button { background: rgba(42, 47, 58, .9); color: #cbd5e1; }
+body.dark .best-actions button:hover { background: #374151; }
+body.dark .best-actions button.danger { background: rgba(127, 29, 29, .85); color: #fca5a5; }
+body.dark .best-actions button.danger:hover { background: #b91c1c; color: #fff; }
+
+/* ===== Ночной режим ТВ ===== */
+body.night .best-header h2 { color: #a78bfa; }
+body.night .best-header .best-sub { color: #6b7280; }
+body.night .best-card.empty { background: #1a1d24; border-color: #2f2f3a; }
+body.night .best-card.empty .best-empty-icon { color: #4b5563; }
+body.night .best-card.empty .best-empty-text { color: #6b7280; }
+
+/* ============================================================
+   ТВ — карточки на всю высоту экрана
+   ============================================================ */
+body.tv-page .best-wrap {
+  height: calc(100vh - 100px);
+  padding: 0 24px 20px;
+  gap: 16px;
+  min-height: 0;
+}
+body.tv-page .best-header {
+  padding: 4px 0 0;
+  flex-shrink: 0;
+}
+body.tv-page .best-header h2 {
+  font-size: 32px;
+  letter-spacing: 3px;
+}
+body.tv-page .best-header .best-sub {
+  font-size: 15px;
+}
+body.tv-page .best-podium {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+  gap: 28px;
+  padding: 24px 24px 0;
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+body.tv-page .best-card {
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  border-radius: 24px;
+  padding: 30px 26px 26px;
+}
+body.tv-page .best-avatar {
+  font-size: 140px;
+  letter-spacing: 6px;
+}
+body.tv-page .best-card.place-1 .best-avatar { font-size: 170px; }
+
+body.tv-page .best-card::after {
+  height: 65%;
+}
+
+body.tv-page .best-name {
+  font-size: 30px;
+  margin: 0 0 10px;
+}
+body.tv-page .best-card.place-1 .best-name { font-size: 38px; }
+
+body.tv-page .best-comment {
+  font-size: 18px;
+  line-height: 1.45;
+  -webkit-line-clamp: 4;
+}
+body.tv-page .best-card.place-1 .best-comment { font-size: 21px; }
+
+body.tv-page .best-medal {
+  width: 72px;
+  height: 72px;
+  font-size: 36px;
+  top: 20px;
+  left: 20px;
+  border-width: 4px;
+}
+
+body.tv-page .best-card.empty .best-empty-icon { font-size: 68px; }
+body.tv-page .best-card.empty .best-empty-text { font-size: 20px; }
+
+/* ============================================================
+   Режим редактирования карточки (админка)
+   ============================================================ */
+.best-card-edit {
+  cursor: default;
+}
+.best-card-edit .best-avatar {
+  filter: blur(0.5px) brightness(0.7);
+  transition: filter .2s;
+}
+.best-card-edit .best-avatar:hover {
+  filter: blur(0) brightness(0.85);
+  cursor: pointer;
+}
+
+.best-edit-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  background: rgba(15, 23, 42, .55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 10px;
+  padding: 24px 20px;
+}
+
+.best-edit-input,
+.best-edit-textarea {
+  width: 100%;
+  font: inherit;
+  font-size: 15px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, .25);
+  background: rgba(255, 255, 255, .96);
+  color: #1e293b;
+  outline: none;
+  resize: none;
+  transition: border-color .15s, background .15s;
+}
+.best-edit-input:focus,
+.best-edit-textarea:focus {
+  border-color: #a78bfa;
+  background: #fff;
+}
+.best-edit-textarea {
+  min-height: 70px;
+  line-height: 1.4;
+}
+
+.best-edit-btns {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+.best-edit-btn {
+  flex: 1;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, transform .05s;
+  white-space: nowrap;
+}
+.best-edit-btn:active { transform: scale(.97); }
+.best-edit-btn.primary {
+  background: #7c3aed;
+  color: #fff;
+}
+.best-edit-btn.primary:hover { background: #6d28d9; }
+.best-edit-btn.secondary {
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+}
+.best-edit-btn.secondary:hover { background: rgba(255, 255, 255, .3); }
+.best-edit-btn.danger {
+  background: #dc2626;
+  color: #fff;
+}
+.best-edit-btn.danger:hover { background: #b91c1c; }
+
+/* Тёмная тема админки */
+body.dark .best-edit-overlay { background: rgba(0, 0, 0, .6); }
+body.dark .best-edit-input,
+body.dark .best-edit-textarea {
+  background: #1a1d24;
+  color: #e5e7eb;
+  border-color: #2f2f3a;
+}
+body.dark .best-edit-input:focus,
+body.dark .best-edit-textarea:focus {
+  border-color: #a78bfa;
+  background: #0f1115;
+}
+
+/* На ТВ-странице режим редактирования не нужен */
+body.tv-page .best-edit-overlay { display: none; }
+
+/* ============================================================
+   Мобильная адаптация
+   ============================================================ */
+@media (max-width: 900px) {
+  .best-podium {
+    grid-template-columns: 1fr;
+    gap: 24px;
+    padding: 16px 4px;
+    max-height: none;
+  }
+  .best-card {
+    min-height: 320px;
+    max-height: none;
+  }
+  .best-card.place-1,
+  .best-card.place-2,
+  .best-card.place-3 { min-height: 320px; }
+
+  body.tv-page .best-wrap {
+    height: auto;
+    padding: 8px 10px 20px;
+  }
+  body.tv-page .best-podium {
+    gap: 20px;
+    padding: 16px 4px;
+    max-height: none;
+  }
+  body.tv-page .best-card {
+    height: auto;
+    max-height: none;
+    min-height: 340px;
+    padding: 22px 18px 20px;
+  }
+  body.tv-page .best-name { font-size: 22px; }
+  body.tv-page .best-card.place-1 .best-name { font-size: 26px; }
+  body.tv-page .best-comment { font-size: 15px; }
+}
+
+/* Кнопка загрузки фото в оверлее редактирования */
+.best-edit-photo-btn {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  background: #ffffff;
+  color: #7c3aed;
+  border: 2px solid #7c3aed;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  margin-bottom: 2px;
+}
+.best-edit-photo-btn:hover {
+  background: #7c3aed;
+  color: #fff;
+}
+.best-edit-photo-btn:active { transform: scale(.98); }
+
+.best-edit-photo-remove {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, .75);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: color .15s, background .15s;
+  margin-bottom: 4px;
+}
+.best-edit-photo-remove:hover {
+  color: #fca5a5;
+  background: rgba(127, 29, 29, .25);
+}
+
+body.dark .best-edit-photo-btn {
+  background: #1a1d24;
+  color: #a78bfa;
+  border-color: #a78bfa;
+}
+body.dark .best-edit-photo-btn:hover {
+  background: #7c3aed;
+  color: #fff;
+  border-color: #7c3aed;
+}

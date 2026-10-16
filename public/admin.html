@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>План работ — админка</title>
 <link rel="stylesheet" href="/css/admin.css">
+<link rel="stylesheet" href="/css/best.css">
 </head>
 <body>
 
@@ -14,6 +15,7 @@
   </h1>
   <div class="actions">
     <select id="board-select" class="board-select"></select>
+    <button class="secondary" id="btn-tv-lock" data-admin-only title="Зафиксировать доску на ТВ">📺 На ТВ</button>
     <button class="secondary" id="btn-manage-boards" data-admin-only title="Управление досками">⚙</button>
     <button class="secondary" id="btn-columns" data-kulebin-only title="Настроить столбцы">📊 Столбцы</button>
     <button class="secondary" id="btn-users" data-admin-only title="Пользователи">👥</button>
@@ -112,10 +114,11 @@
     <div class="field"><label>Название новой доски</label><input type="text" id="board-new-name" placeholder="Например, гр.Кулибин 2"></div>
     <div class="field">
       <label>Тип доски</label>
-      <select id="board-new-type">
-        <option value="kanban">Канбан (горизонты)</option>
-        <option value="kulebin">Таблица (настраиваемые столбцы)</option>
-      </select>
+    <select id="board-new-type">
+      <option value="kanban">Канбан (горизонты)</option>
+      <option value="kulebin">Таблица (настраиваемые столбцы)</option>
+      <option value="best">🏆 Отличники службы</option>
+    </select>
     </div>
 
     <hr style="margin: 18px 0; border: none; border-top: 1px solid #e2e8f0;">
@@ -209,6 +212,8 @@
 <script src="/socket.io/socket.io.js"></script>
 <script src="/js/common.js"></script>
 <script src="/js/admin.js"></script>
+<script src="/js/best-admin.js"></script>
+<script src="/js/tv-lock.js"></script>
 
 </body>
 </html>

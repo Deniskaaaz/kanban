@@ -1,6 +1,7 @@
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
-const db = new Database('/var/www/kanban/data.db');
+const DB_PATH = process.env.DB_PATH || '/var/www/kanban/data.db';
+const db = new Database(DB_PATH);
 
 // WAL — быстрее параллельные чтение/запись
 db.pragma('journal_mode = WAL');
@@ -47,6 +48,15 @@ db.exec(`
     user_id INTEGER NOT NULL,
     board_id INTEGER NOT NULL,
     PRIMARY KEY (user_id, board_id)
+  );
+  CREATE TABLE IF NOT EXISTS best_employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    board_id INTEGER NOT NULL,
+    place INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    comment TEXT DEFAULT '',
+    avatar TEXT DEFAULT '',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 `);
 
@@ -153,6 +163,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_people_board       ON people(board_id);
   CREATE INDEX IF NOT EXISTS idx_board_access_user  ON board_access(user_id);
   CREATE INDEX IF NOT EXISTS idx_board_access_board ON board_access(board_id);
+  CREATE INDEX IF NOT EXISTS idx_best_board         ON best_employees(board_id);
 `);
 
 // ---- Периодический checkpoint WAL ----
